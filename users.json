@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": 1786777720760,
+    "name": "Palak",
+    "email": "palak@test.com",
+    "password": "$2b$10$4cYSTigYSjS2xpkMyvsTZODScQiD.ksv4PP6QoAdKacwVRKuhCLBG"
+  },
+  {
+    "id": 1787384429941,
+    "name": "PALAK SOLANKI",
+    "email": "palaksolanki213@gmail.com",
+    "password": "$2b$10$huoWRZej3zOs74VzYETLH.pr5y40haNcGLTv5YMpy9o1faiyJd63a"
+  }
+]

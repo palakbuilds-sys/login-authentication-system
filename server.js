@@ -1,49 +1,42 @@
+require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
-const dotenv = require("dotenv");
-
-dotenv.config();
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const SESSION_SECRET =
-  process.env.SESSION_SECRET || "development-secret-change-this";
 
 const USERS_FILE = path.join(__dirname, "users.json");
 
 // Middleware
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use(
   session({
-    secret: SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "my-super-secret-key",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60
-    }
+  secure: process.env.NODE_ENV === "production",
+  httpOnly: true,
+  maxAge: 1000 * 60 * 60
+}
   })
 );
 
-// Serve frontend files
 app.use(express.static(path.join(__dirname, "public")));
 
-// -------------------------
+// ----------------------------
 // Helper functions
-// -------------------------
+// ----------------------------
 
 function getUsers() {
   try {
-    if (!fs.existsSync(USERS_FILE)) {
-      fs.writeFileSync(USERS_FILE, "[]");
-    }
-
     const data = fs.readFileSync(USERS_FILE, "utf8");
 
     if (!data.trim()) {
@@ -52,7 +45,6 @@ function getUsers() {
 
     return JSON.parse(data);
   } catch (error) {
-    console.error("Error reading users:", error);
     return [];
   }
 }
@@ -60,22 +52,23 @@ function getUsers() {
 function saveUsers(users) {
   fs.writeFileSync(
     USERS_FILE,
-    JSON.stringify(users, null, 2),
-    "utf8"
+    JSON.stringify(users, null, 2)
   );
 }
 
-// -------------------------
+// ----------------------------
 // Home / Login page
-// -------------------------
+// ----------------------------
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(
+    path.join(__dirname, "public", "index.html")
+  );
 });
 
-// -------------------------
+// ----------------------------
 // Register
-// -------------------------
+// ----------------------------
 
 app.post("/register", async (req, res) => {
   try {
@@ -84,78 +77,69 @@ app.post("/register", async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required."
+        message: "All fields are required"
       });
     }
 
     const users = getUsers();
 
-    const normalizedEmail = email.trim().toLowerCase();
-
     const existingUser = users.find(
-      (user) => user.email === normalizedEmail
+      (user) => user.email === email
     );
 
     if (existingUser) {
-      return res.status(409).json({
+      return res.status(400).json({
         success: false,
-        message: "Email is already registered."
+        message: "User already exists"
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      email: normalizedEmail,
+      id: Date.now(),
+      name,
+      email,
       password: hashedPassword
     };
 
     users.push(newUser);
+
     saveUsers(users);
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: "Registration successful."
+      message: "Registration successful"
     });
+
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "Something went wrong during registration."
+      message: "Server error"
     });
   }
 });
 
-// -------------------------
+// ----------------------------
 // Login
-// -------------------------
+// ----------------------------
 
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required."
-      });
-    }
-
     const users = getUsers();
 
-    const normalizedEmail = email.trim().toLowerCase();
-
     const user = users.find(
-      (user) => user.email === normalizedEmail
+      (user) => user.email === email
     );
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password."
+        message: "Invalid email or password"
       });
     }
 
@@ -167,7 +151,7 @@ app.post("/login", async (req, res) => {
     if (!passwordMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password."
+        message: "Invalid email or password"
       });
     }
 
@@ -179,28 +163,42 @@ app.post("/login", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Login successful.",
-      user: req.session.user
+      message: "Login successful"
     });
+
   } catch (error) {
-    console.error("Login error:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "Something went wrong during login."
+      message: "Server error"
     });
   }
 });
 
-// -------------------------
-// Check authentication
-// -------------------------
+// ----------------------------
+// Protected Dashboard
+// ----------------------------
 
-app.get("/api/me", (req, res) => {
+app.get("/dashboard", (req, res) => {
+  if (!req.session.user) {
+    return res.redirect("/");
+  }
+
+  res.sendFile(
+    path.join(__dirname, "public", "dashboard.html")
+  );
+});
+
+// ----------------------------
+// Get logged-in user
+// ----------------------------
+
+app.get("/api/user", (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({
       success: false,
-      message: "Not authenticated."
+      message: "Not logged in"
     });
   }
 
@@ -210,32 +208,16 @@ app.get("/api/me", (req, res) => {
   });
 });
 
-// -------------------------
-// Protected dashboard
-// -------------------------
-
-app.get("/dashboard", (req, res) => {
-  if (!req.session.user) {
-    return res.redirect("/");
-  }
-
-  res.sendFile(
-    path.join(__dirname, "dashboard.html")
-  );
-});
-
-// -------------------------
+// ----------------------------
 // Logout
-// -------------------------
+// ----------------------------
 
 app.post("/logout", (req, res) => {
   req.session.destroy((error) => {
     if (error) {
-      console.error("Logout error:", error);
-
       return res.status(500).json({
         success: false,
-        message: "Could not log out."
+        message: "Logout failed"
       });
     }
 
@@ -243,14 +225,14 @@ app.post("/logout", (req, res) => {
 
     res.json({
       success: true,
-      message: "Logout successful."
+      message: "Logged out successfully"
     });
   });
 });
 
-// -------------------------
-// 404 handler
-// -------------------------
+// ----------------------------
+// 404
+// ----------------------------
 
 app.use((req, res) => {
   res.status(404).json({
@@ -259,10 +241,10 @@ app.use((req, res) => {
   });
 });
 
-// -------------------------
-// Start server
-// -------------------------
+// ----------------------------
+// Start Server
+// ----------------------------
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

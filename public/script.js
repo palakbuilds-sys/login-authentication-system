@@ -1,159 +1,159 @@
-document.addEventListener("DOMContentLoaded", () => {
+// ================================
+// LOGIN
+// ================================
 
-  // =========================
-  // LOGIN
-  // =========================
+const loginForm = document.getElementById("loginForm");
 
-  const loginForm = document.getElementById("loginForm");
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  if (loginForm) {
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+    const loginMessage = document.getElementById("loginMessage");
 
-    loginForm.addEventListener("submit", async (event) => {
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
 
-      event.preventDefault();
+      const data = await response.json();
 
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-      const message = document.getElementById("loginMessage");
+      if (data.success) {
+        loginMessage.style.color = "green";
+        loginMessage.textContent = "Login successful! Redirecting...";
 
-      try {
-
-        const response = await fetch("/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          message.textContent = data.message || "Login failed.";
-          return;
-        }
-
-        message.textContent = "Login successful!";
-
-        // Go to protected dashboard
         window.location.href = "/dashboard";
-
-      } catch (error) {
-
-        console.error("Login error:", error);
-
-        message.textContent =
-          "Unable to connect to the server.";
-
+      } else {
+        loginMessage.style.color = "red";
+        loginMessage.textContent = data.message;
       }
 
-    });
+    } catch (error) {
+      loginMessage.style.color = "red";
+      loginMessage.textContent = "Something went wrong. Please try again.";
+      console.error(error);
+    }
+  });
+}
 
-  }
 
+// ================================
+// REGISTER
+// ================================
 
-  // =========================
-  // REGISTER
-  // =========================
+const registerForm = document.getElementById("registerForm");
 
-  const registerForm = document.getElementById("registerForm");
+if (registerForm) {
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  if (registerForm) {
+    const name = document.getElementById("registerName").value;
+    const email = document.getElementById("registerEmail").value;
+    const password = document.getElementById("registerPassword").value;
+    const registerMessage = document.getElementById("registerMessage");
 
-    registerForm.addEventListener("submit", async (event) => {
+    try {
+      const response = await fetch("/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password
+        })
+      });
 
-      event.preventDefault();
+      const data = await response.json();
 
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      if (data.success) {
+        registerMessage.style.color = "green";
+        registerMessage.textContent =
+          "Registration successful! Redirecting to login...";
 
-      const message = document.getElementById("registerMessage");
-
-      try {
-
-        const response = await fetch("/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: name,
-            email: email,
-            password: password
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-          if (message) {
-            message.textContent =
-              data.message || "Registration failed.";
-          }
-
-          return;
-        }
-
-        if (message) {
-          message.textContent =
-            "Registration successful!";
-        }
-
-        // Go back to login
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/index.html";
         }, 1000);
 
-      } catch (error) {
-
-        console.error("Registration error:", error);
-
-        if (message) {
-          message.textContent =
-            "Unable to connect to the server.";
-        }
-
+      } else {
+        registerMessage.style.color = "red";
+        registerMessage.textContent = data.message;
       }
 
-    });
+    } catch (error) {
+      registerMessage.style.color = "red";
+      registerMessage.textContent = "Something went wrong. Please try again.";
+      console.error(error);
+    }
+  });
+}
 
-  }
 
+// ================================
+// DASHBOARD
+// ================================
 
-  // =========================
-  // LOGOUT
-  // =========================
+const userName = document.getElementById("userName");
+const userEmail = document.getElementById("userEmail");
+const welcomeMessage = document.getElementById("welcomeMessage");
 
-  const logoutButton =
-    document.getElementById("logoutButton");
+if (userName && userEmail) {
+  fetch("/api/user")
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        userName.textContent = data.user.name;
+        userEmail.textContent = data.user.email;
 
-  if (logoutButton) {
-
-    logoutButton.addEventListener("click", async () => {
-
-      try {
-
-        const response = await fetch("/logout", {
-          method: "POST"
-        });
-
-        if (response.ok) {
-          window.location.href = "/";
+        if (welcomeMessage) {
+          welcomeMessage.textContent =
+            `Hello, ${data.user.name}! 👋`;
         }
+      } else {
+        window.location.href = "/index.html";
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching user:", error);
 
-      } catch (error) {
+      if (welcomeMessage) {
+        welcomeMessage.textContent =
+          "Unable to load user information.";
+      }
+    });
+}
 
-        console.error("Logout error:", error);
 
+// ================================
+// LOGOUT
+// ================================
+
+const logoutButton = document.getElementById("logoutButton");
+
+if (logoutButton) {
+  logoutButton.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/logout", {
+        method: "POST"
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        window.location.href = "/index.html";
       }
 
-    });
-
-  }
-
-});
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  });
+}
