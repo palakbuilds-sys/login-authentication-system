@@ -1,135 +1,159 @@
-// ==============================
-// REGISTER
-// ==============================
+document.addEventListener("DOMContentLoaded", () => {
 
-const registerForm = document.getElementById("registerForm");
+  // =========================
+  // LOGIN
+  // =========================
 
-if (registerForm) {
+  const loginForm = document.getElementById("loginForm");
 
-  registerForm.addEventListener("submit", async (e) => {
+  if (loginForm) {
 
-    e.preventDefault();
+    loginForm.addEventListener("submit", async (event) => {
 
-    const user = {
-      name: document.getElementById("name").value,
-      email: document.getElementById("email").value,
-      password: document.getElementById("password").value
-    };
+      event.preventDefault();
 
-    const response = await fetch("/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(user)
-    });
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const message = document.getElementById("loginMessage");
 
-    const data = await response.json();
+      try {
 
-    document.getElementById("message").innerText =
-      data.message;
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password
+          })
+        });
 
-    if (response.ok) {
-      registerForm.reset();
-    }
-  });
-}
+        const data = await response.json();
 
+        if (!response.ok) {
+          message.textContent = data.message || "Login failed.";
+          return;
+        }
 
-// ==============================
-// LOGIN
-// ==============================
+        message.textContent = "Login successful!";
 
-const loginForm = document.getElementById("loginForm");
+        // Go to protected dashboard
+        window.location.href = "/dashboard";
 
-if (loginForm) {
+      } catch (error) {
 
-  loginForm.addEventListener("submit", async (e) => {
+        console.error("Login error:", error);
 
-    e.preventDefault();
+        message.textContent =
+          "Unable to connect to the server.";
 
-    const user = {
-      email: document.getElementById("loginEmail").value,
-      password: document.getElementById("loginPassword").value
-    };
-
-    const response = await fetch("/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(user)
-    });
-
-    const data = await response.json();
-
-    document.getElementById("loginMessage").innerText =
-      data.message;
-
-    if (response.ok) {
-      window.location.href = "/dashboard";
-    }
-  });
-}
-
-
-// ==============================
-// DASHBOARD
-// ==============================
-
-const welcomeMessage =
-  document.getElementById("welcomeMessage");
-
-if (welcomeMessage) {
-
-  fetch("/api/user")
-    .then(response => {
-
-      if (!response.ok) {
-        window.location.href = "/";
-        return;
       }
 
-      return response.json();
-    })
-
-    .then(user => {
-
-      if (!user) return;
-
-      document.getElementById("userName").innerText =
-        user.name;
-
-      document.getElementById("userEmail").innerText =
-        user.email;
-
-      document.getElementById("welcomeMessage").innerText =
-        `Welcome back, ${user.name}!`;
-    });
-}
-
-
-// ==============================
-// LOGOUT
-// ==============================
-
-const logoutButton =
-  document.getElementById("logoutButton");
-
-if (logoutButton) {
-
-  logoutButton.addEventListener("click", async () => {
-
-    const response = await fetch("/logout", {
-      method: "POST"
     });
 
-    const data = await response.json();
+  }
 
-    if (response.ok) {
-      window.location.href = "/";
-    } else {
-      alert(data.message);
-    }
-  });
-}
+
+  // =========================
+  // REGISTER
+  // =========================
+
+  const registerForm = document.getElementById("registerForm");
+
+  if (registerForm) {
+
+    registerForm.addEventListener("submit", async (event) => {
+
+      event.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const message = document.getElementById("registerMessage");
+
+      try {
+
+        const response = await fetch("/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+          if (message) {
+            message.textContent =
+              data.message || "Registration failed.";
+          }
+
+          return;
+        }
+
+        if (message) {
+          message.textContent =
+            "Registration successful!";
+        }
+
+        // Go back to login
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
+
+      } catch (error) {
+
+        console.error("Registration error:", error);
+
+        if (message) {
+          message.textContent =
+            "Unable to connect to the server.";
+        }
+
+      }
+
+    });
+
+  }
+
+
+  // =========================
+  // LOGOUT
+  // =========================
+
+  const logoutButton =
+    document.getElementById("logoutButton");
+
+  if (logoutButton) {
+
+    logoutButton.addEventListener("click", async () => {
+
+      try {
+
+        const response = await fetch("/logout", {
+          method: "POST"
+        });
+
+        if (response.ok) {
+          window.location.href = "/";
+        }
+
+      } catch (error) {
+
+        console.error("Logout error:", error);
+
+      }
+
+    });
+
+  }
+
+});
